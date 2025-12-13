@@ -40,7 +40,7 @@ func (c *Client) readPump() {
 
 	c.conn.SetReadLimit(maxMsgSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
-	c.conn.SetPongHandler( func(string) error { c.conn.SetReadDeadline(time.Now().Add(PongWait)); return nil})
+	c.conn.SetPongHandler( func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil})
 
 	for{
 		_, msg, err := c.conn.ReadMessage()
