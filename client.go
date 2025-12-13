@@ -17,11 +17,11 @@ const (
 )
 
 var (
-	newLine = []byte{"\n"}
-	space = []byte{" "}
+	newLine = []byte{'\n'}
+	space = []byte{' '}
 )
 
-var upgrader = websocket.upgrader{
+var upgrader = websocket.Upgrader{
 	ReadBufferSize: 1024,
 	WriteBufferSize: 1024,
 }
@@ -51,23 +51,67 @@ func (c *Client) readPump() {
 			}
 			break
 		}
-		msg = bytes.TrimSpace(bytes.Replace(msg, newline, space, -1))
+		msg = bytes.TrimSpace(bytes.Replace(msg, newLine, space, -1))
 		c.hub.broadcast <- msg
 	}
 }
 
 func (c *Client) writePump(){
-	timer := time.NewTicker(pingPeriod)
+	ticker := time.NewTicker(pingPeriod)
 	defer func() {
-		timer.Stop()
+		ticker.Stop()
 		c.conn.Close()
 	}()
 
 	for {
 		select{
 		case message, ok := <- c.send:
+			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			
+			if !ok{
+				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
 
+			w, err := c.conn.NextWriter(websocket.TextMessage)
+
+			if err != nil{
+				log.Printf("Error : %v",err)
+				return
+			}
+
+			w.Write(message)
+
+			n := len(c.send)
+
+			for i:=0; i < n; i++{
+				w.Write(newLine)
+				w.Write(<-c.send)
+			}
+
+			if err := w.Close(); err != nil{
+				return
+			}
+		case <-ticker.C:
+			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err:= c.conn.WriteMessage(websocket.PingMessage, nil); err != nil{
+				return
+			}
 		}
 	}
+}
+
+func serverWs(hub *Hub, w http.ResponseWriter, r *http.Request){
+	conn, err := upgrader.Upgrade(w, r, nil)
+
+	if err != nil{
+		log.Println("Error: %v", err)
+		return
+	}
+
+	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256)}
+	client.hub.register <- client
+
+	go client.readPump()
+	go client.writePump()
 }
