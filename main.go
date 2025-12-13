@@ -1,10 +1,38 @@
 package main
 
 import (
-	"fmt"
+	"flag"
+	"log"
+	"net/http"
 )
 
+var addr = flag.String("addr",":8800","http Service addr")
+
+func serveHome(w http.ResponseWriter, r *http.Request){
+	log.Println(r.URL)
+	if r.URL.Path != "/"{
+		http.Error(w, "Not Found", http.StatusNotFound)
+		return
+	}
+
+	if r.Method != http.MethodGet{
+		http.Error(w, "Request Method is not GET", http.StatusMethodNotAllowed)
+		return
+	}
+
+	http.ServeFile(w,r,"test.html")
+}
+
 func main(){
-	
-	fmt.Println("Hello");
+	flag.Parse()
+	hub := createHub()
+	go hub.run()
+	http.HandleFunc("/", serveHome)
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		serveWs(hub, w, r)
+	})
+	err := http.ListenAndServe(*addr, nil)
+	if err != nil {
+		log.Fatal("ListenAndServe: ", err)
+	}
 }

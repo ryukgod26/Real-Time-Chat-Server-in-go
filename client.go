@@ -101,11 +101,11 @@ func (c *Client) writePump(){
 	}
 }
 
-func serverWs(hub *Hub, w http.ResponseWriter, r *http.Request){
+func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request){
 	conn, err := upgrader.Upgrade(w, r, nil)
 
 	if err != nil{
-		log.Println("Error: %v", err)
+		log.Printf("Error: %v", err)
 		return
 	}
 
