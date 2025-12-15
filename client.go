@@ -51,8 +51,24 @@ func (c *Client) readPump() {
 			}
 			break
 		}
+		log.Println(msg)
+		jsonData, err := json.Marshal(msg)
+		log.Println(string(jsonData))
+		if err != nil || jsonData.Username == nil{
+			log.Printf("Error During Marshaling: %v", err)
+			break
+		}
+		jsonData.Time = time.Now()
+		data := []byte(string(jsonData))
+		var finalMsg Message
+		err := json.Unmarshal(data,&finalMsg)
+		if err != nil{
+			log.Printf("Error Occured During Unmarshalling: %v",err)
+			break
+		}
+
 		msg = bytes.TrimSpace(bytes.Replace(msg, newLine, space, -1))
-		c.hub.broadcast <- msg
+		c.hub.broadcast <- finalMsg
 	}
 }
 
