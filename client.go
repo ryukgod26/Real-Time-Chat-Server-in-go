@@ -1,7 +1,8 @@
-package main 
+package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -44,31 +45,35 @@ func (c *Client) readPump() {
 
 	for{
 		_, msg, err := c.conn.ReadMessage()
-
+		msg = bytes.TrimSpace(bytes.Replace(msg, newLine, space, -1))
 		if err != nil{
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure){
 				log.Printf("error: %v",err)
 			}
 			break
 		}
-		log.Println(msg)
-		jsonData, err := json.Marshal(msg)
-		log.Println(string(jsonData))
-		if err != nil || jsonData.Username == nil{
-			log.Printf("Error During Marshaling: %v", err)
-			break
-		}
-		jsonData.Time = time.Now()
-		data := []byte(string(jsonData))
 		var finalMsg Message
-		err := json.Unmarshal(data,&finalMsg)
-		if err != nil{
-			log.Printf("Error Occured During Unmarshalling: %v",err)
-			break
+		log.Println(msg)
+		if  err := json.Unmarshal(msg,&finalMsg); err != nil {
+			log.Printf("Error During UnMarshaling: %v", err)
+			continue
 		}
 
-		msg = bytes.TrimSpace(bytes.Replace(msg, newLine, space, -1))
-		c.hub.broadcast <- finalMsg
+		if finalMsg.Username == ""|| finalMsg.Content == ""{
+			log.Printf("Invalid Username: %v or Content: %v Error",finalMsg.Username, finalMsg.Content)
+			continue
+		}
+		log.Println(string(finalMsg.Username))
+		log.Println(string(finalMsg.Content))
+		log.Println(time.Time(finalMsg.Time))
+		finalMsg.Time = time.Now()
+		
+		data, err := json.Marshal(finalMsg)
+		if err != nil{
+			log.Printf("Error Occured During Mrshalling: %v",err)
+			continue
+		}
+		c.hub.broadcast <- data
 	}
 }
 
