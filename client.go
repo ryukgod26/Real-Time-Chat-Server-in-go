@@ -45,7 +45,6 @@ func (c *Client) readPump() {
 
 	for{
 		_, msg, err := c.conn.ReadMessage()
-		msg = bytes.TrimSpace(bytes.Replace(msg, newLine, space, -1))
 		if err != nil{
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure){
 				log.Printf("error: %v",err)
