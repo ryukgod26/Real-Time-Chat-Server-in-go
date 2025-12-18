@@ -6,20 +6,27 @@ import (
 	"encoding/json"
 	"net/url"
 	"os"
-	"strings"
+	// "strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	// "github.com/charmbracelet/lipgloss"
 	"github.com/gorilla/websocket"
 )
+
+type Message struct {
+	Username string `json:"username"`
+	Content  string `json:"content"`
+	Time     time.Time `json:"time"`
+}
+
 
 type model struct{
 	viewport viewport.Model
 	textinput textinput.Model
-	conn *websocket.Conm
+	conn *websocket.Conn
 	err error
 }
 
@@ -42,14 +49,14 @@ func newModel(conn *websocket.Conn) model{
 }
 
 func (m model) Init() tea.Cmd{
-	tea.Batch(textinput.blink, waitForIncomingMessage(m.conn))
+	return tea.Batch(textinput.Blink, waitForImcomingMessage(m.conn))
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var(
-		vpCmd tea.Cmd
-		tiCmd tea.Cmd
-	)
+	// var(
+	// 	vpCmd tea.Cmd
+	// 	tiCmd tea.Cmd
+	// )
 
 	switch msg := msg.(type){
 	case tea.KeyMsg:
@@ -57,7 +64,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlC, tea.KeyEsc:
 			return m, tea.Quit
 		case tea.KeyEnter:
-			content := m.textInput.Value()
+			content := m.textinput.Value()
 			if content != ""{
 				outMsg := Message{Username: "Test_User", Content: content, Time: time.Now()}
 				finalMsg, err := json.Marshal(outMsg)
@@ -72,19 +79,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.err = err
 					return m, tea.Quit
 				}
-				m.textInput.Reset()
-
+				m.textinput.Reset()
 			}
 		}
+		return m,nil
 	case Message:
 		formattedMsg := fmt.Sprintf("%s, %s, %s", msg.Username, msg.Content, msg.Time)
-		m.viewport.SetContent(m.viewport.View() + "\n" + formatted)
+		m.viewport.SetContent(m.viewport.View() + "\n" + formattedMsg)
 		m.viewport.GotoBottom()
-		return m, waitForIncomingMessage(m.conn)
-	case err:
-		m.err = err
+		return m, waitForImcomingMessage(m.conn)
+	case error:
+		m.err = msg
 		return m, nil
 	}
+	return m, nil
 }
 
 func (m model) View() string{
@@ -95,7 +103,7 @@ func (m model) View() string{
 }
 
 func waitForImcomingMessage(conn *websocket.Conn) tea.Cmd{
-	return func() {
+	return func() tea.Msg {
 		_, bytes, err := conn.ReadMessage()
 		if err != nil{
 			return err
@@ -107,14 +115,14 @@ func waitForImcomingMessage(conn *websocket.Conn) tea.Cmd{
 }
 
 func main() {
-	u := url.Url(Schene: "ws", Host: "localhost:8800", Path: "/ws")
+	u := url.URL{Scheme: "ws", Host: "localhost:8800", Path: "/ws"}
 	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
 		log.Fatal("Dial Error:", err)
 	}
 	defer conn.Close()
 
-	p := tea.NewProgram(intialModel(conn))
+	p := tea.NewProgram(newModel(conn))
 	if _, err := p.Run(); err != nil{
 		fmt.Printf("Error Occurred: %v", err)
 		os.Exit(1)

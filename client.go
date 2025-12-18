@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -64,7 +63,7 @@ func (c *Client) readPump() {
 		}
 		log.Println(string(finalMsg.Username))
 		log.Println(string(finalMsg.Content))
-		log.Println(time.Time(finalMsg.Time))
+		log.Println(finalMsg.Time)
 		finalMsg.Time = time.Now()
 		
 		data, err := json.Marshal(finalMsg)

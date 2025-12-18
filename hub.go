@@ -1,7 +1,5 @@
 package main
 
-
-
 type Hub struct{
 	broadcast chan []byte
 	clients map[*Client] bool
