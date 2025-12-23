@@ -28,14 +28,18 @@ func main(){
 	flag.Parse()
 	app := tview.NewApplication()
 	root := buildMenu(app)
-	hub := createHub()
-	go hub.run()
-	http.HandleFunc("/", serveHome)
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		serveWs(hub, w, r)
-	})
-	err := http.ListenAndServe(*addr, nil)
-	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
+	
+	if err := app.SetRoot(root, true).EnableMouse(true).Run(); err != nil{
+		log.Fatal(err)
 	}
+	// hub := createHub()
+	// go hub.run()
+	// http.HandleFunc("/", serveHome)
+	// http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+	// 	serveWs(hub, w, r)
+	// })
+	// err := http.ListenAndServe(*addr, nil)
+	// if err != nil {
+	// 	log.Fatal("ListenAndServe: ", err)
+	// }
 }

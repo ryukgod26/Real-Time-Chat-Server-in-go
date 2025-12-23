@@ -45,7 +45,6 @@ func buildMenu(app *tview.Application) *tview.Modal {
     return modal
 }
 
-// Server UI: start HTTP server and show logs in a TextView.
 func buildServerUI(app *tview.Application) tview.Primitive {
     logView := tview.NewTextView().
         SetDynamicColors(true).
@@ -60,10 +59,8 @@ func buildServerUI(app *tview.Application) tview.Primitive {
         AddItem(logView, 0, 1, false).
         AddItem(footer, 1, 0, false)
 
-    // Route standard logger to the TextView.
     log.SetOutput(&textViewWriter{app: app, tv: logView})
 
-    // Start server in the background.
     go func() {
         hub := createHub()
         go hub.run()
@@ -80,21 +77,18 @@ func buildServerUI(app *tview.Application) tview.Primitive {
         }
     }()
 
-    // Key bindings
     flex.SetInputCapture(func(e *tcell.EventKey) *tcell.EventKey {
         switch e.Key() {
         case tcell.KeyEsc:
             app.SetRoot(buildMenu(app), true)
             return nil
         }
-        // Ctrl+C is handled by the terminal to kill the process.
         return e
     })
 
     return flex
 }
 
-// Client connection and chat UI
 type chatClient struct {
     app      *tview.Application
     msgView  *tview.TextView
@@ -144,13 +138,11 @@ func buildClientForm(app *tview.Application) tview.Primitive {
 }
 
 func buildChatUI(app *tview.Application, serverURL, username, _ string) (tview.Primitive, error) {
-    // Validate URL
     u, err := url.Parse(serverURL)
     if err != nil || (u.Scheme != "ws" && u.Scheme != "wss") || u.Host == "" {
         return nil, fmt.Errorf("invalid WebSocket URL: %s", serverURL)
     }
 
-    // Connect
     dialer := websocket.Dialer{
         HandshakeTimeout: 10 * time.Second,
     }
@@ -178,7 +170,6 @@ func buildChatUI(app *tview.Application, serverURL, username, _ string) (tview.P
         username: username,
     }
 
-    // Reader goroutine
     go func() {
         defer conn.Close()
         for {
@@ -191,7 +182,6 @@ func buildChatUI(app *tview.Application, serverURL, username, _ string) (tview.P
         }
     }()
 
-    // Send on Enter
     input.SetDoneFunc(func(key tcell.Key) {
         if key != tcell.KeyEnter {
             return
