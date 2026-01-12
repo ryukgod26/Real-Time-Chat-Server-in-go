@@ -20,7 +20,7 @@ func serveHome(w http.ResponseWriter, r *http.Request){
 		http.Error(w, "Request Method is not GET", http.StatusMethodNotAllowed)
 		return
 	}
-
+	
 	http.ServeFile(w,r,"test.html")
 }
 

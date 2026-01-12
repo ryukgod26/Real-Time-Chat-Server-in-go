@@ -42,6 +42,7 @@ func buildMenu(app *tview.Application) *tview.Modal {
                 app.Stop()
             }
         })
+
     return modal
 }
 
@@ -125,9 +126,11 @@ func buildClientForm(app *tview.Application) tview.Primitive {
         }
         app.SetRoot(root, true)
     })
+
     form.AddButton("Back", func() {
         app.SetRoot(buildMenu(app), true)
     })
+
     form.SetBorder(true).SetTitle(" Connect as Client ").SetTitleAlign(tview.AlignLeft)
 
     return tview.NewFlex().SetDirection(tview.FlexRow).
@@ -138,11 +141,11 @@ func buildClientForm(app *tview.Application) tview.Primitive {
 }
 
 func buildChatUI(app *tview.Application, serverURL, username, _ string) (tview.Primitive, error) {
+
     u, err := url.Parse(serverURL)
     if err != nil || (u.Scheme != "ws" && u.Scheme != "wss") || u.Host == "" {
         return nil, fmt.Errorf("invalid WebSocket URL: %s", serverURL)
     }
-
     dialer := websocket.Dialer{
         HandshakeTimeout: 10 * time.Second,
     }
@@ -199,13 +202,11 @@ func buildChatUI(app *tview.Application, serverURL, username, _ string) (tview.P
         input.SetText("")
     })
 
-    // Layout
     flex := tview.NewFlex().SetDirection(tview.FlexRow).
         AddItem(msgView, 0, 1, false).
         AddItem(input, 3, 0, true).
         AddItem(status, 1, 0, false)
 
-    // Keys
     flex.SetInputCapture(func(e *tcell.EventKey) *tcell.EventKey {
         switch e.Key() {
         case tcell.KeyEsc:
@@ -217,7 +218,6 @@ func buildChatUI(app *tview.Application, serverURL, username, _ string) (tview.P
         return e
     })
 
-    // Announce join (optional)
     _ = conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("[joined] %s", username)))
 
     return flex, nil
