@@ -59,7 +59,7 @@ func (h *Hub) run() {
 			}
 
 		case message := <-h.publish:
-			err := h.redisClient.Publish(context.Background(), "chat_roon", message).Err()
+			err := h.redisClient.Publish(context.Background(), "chat_room", message).Err()
 			if err != nil{
 				fmt.Println("Error While doing Redis Publish: ",err)
 			}
