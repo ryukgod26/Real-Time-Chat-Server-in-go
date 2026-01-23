@@ -3,34 +3,40 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 )
 
 type Hub struct {
-	broadcast  chan []byte
-	clients    map[*Client]bool
-	register   chan *Client
-	unregister chan *Client
-	publish chan []byte
+	broadcast   chan []byte
+	clients     map[*Client]bool
+	register    chan *Client
+	unregister  chan *Client
+	publish     chan []byte
 	redisClient *redis.Client
 }
 
 func createHub() *Hub {
+	// Load environment variables from .env if present
+	if err := godotenv.Load(); err != nil {
+		log.Printf(".env not found or failed to load: %v", err)
+	}
 
 	redisUrl := os.Getenv("REDIS_URL")
 	if redisUrl == "" {
+		log.Printf("REDIS_URL not set; defaulting to %s", "redis://localhost:6379")
 		redisUrl = "redis://localhost:6379"
 	}
 
 	opt, err := redis.ParseURL(redisUrl)
+	if err != nil {
+		log.Fatalf("Invalid REDIS_URL (%s): %v", redisUrl, err)
+	}
 
 	rdb := redis.NewClient(opt)
-
-	if err != nil {
-		panic(err)
-	}
 
 	return &Hub{
 		broadcast:   make(chan []byte),
@@ -60,8 +66,8 @@ func (h *Hub) run() {
 
 		case message := <-h.publish:
 			err := h.redisClient.Publish(context.Background(), "chat_room", message).Err()
-			if err != nil{
-				fmt.Println("Error While doing Redis Publish: ",err)
+			if err != nil {
+				fmt.Println("Error While doing Redis Publish: ", err)
 			}
 
 		case message := <-h.broadcast:
@@ -83,9 +89,8 @@ func (h *Hub) subscribeToRedis() {
 	defer pubsub.Close()
 
 	ch := pubsub.Channel()
-	for msg := range ch{
+	for msg := range ch {
 		h.broadcast <- []byte(msg.Payload)
 	}
-
 
 }
