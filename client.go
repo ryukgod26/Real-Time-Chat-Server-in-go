@@ -10,73 +10,72 @@ import (
 )
 
 const (
-	writeWait  = 10 * time.Second
-	pongWait   = 60 * time.Second
-	pingPeriod = (pongWait * 9) / 10
+	writeWait = 10 * time.Second
+	pongWait = 60 * time.Second
+	pingPeriod = (pongWait  * 9) / 10
 	maxMsgSize = 512
 )
 
 var (
 	newLine = []byte{'\n'}
-	space   = []byte{' '}
+	space = []byte{' '}
 )
 
 var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
+	ReadBufferSize: 1024,
 	WriteBufferSize: 1024,
 }
 
-type Client struct {
-	hub  *Hub
+type Client struct{
+	hub *Hub
 	conn *websocket.Conn
 	send chan []byte
 }
 
 func (c *Client) readPump() {
-	defer func() {
+	defer func(){
 		c.hub.unregister <- c
 		c.conn.Close()
 	}()
 
 	c.conn.SetReadLimit(maxMsgSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
-	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	c.conn.SetPongHandler( func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil})
 
-	for {
+	for{
 		_, msg, err := c.conn.ReadMessage()
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error: %v", err)
+		if err != nil{
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure){
+				log.Printf("error: %v",err)
 			}
 			break
 		}
 		var finalMsg Message
 		log.Println(msg)
-		if err := json.Unmarshal(msg, &finalMsg); err != nil {
+		if  err := json.Unmarshal(msg,&finalMsg); err != nil {
 			log.Printf("Error During UnMarshaling: %v", err)
 			continue
 		}
 
-		if finalMsg.Username == "" || finalMsg.Content == "" {
-			log.Printf("Invalid Username: %v or Content: %v Error", finalMsg.Username, finalMsg.Content)
+		if finalMsg.Username == ""|| finalMsg.Content == ""{
+			log.Printf("Invalid Username: %v or Content: %v Error",finalMsg.Username, finalMsg.Content)
 			continue
 		}
 		log.Println(string(finalMsg.Username))
 		log.Println(string(finalMsg.Content))
 		log.Println(finalMsg.Time)
 		finalMsg.Time = time.Now()
-
+		
 		data, err := json.Marshal(finalMsg)
-		if err != nil {
-			log.Printf("Error Occured During Mrshalling: %v", err)
+		if err != nil{
+			log.Printf("Error Occured During Mrshalling: %v",err)
 			continue
 		}
-		// c.hub.broadcast <- data
-		c.hub.publish <- data
+		c.hub.broadcast <- data
 	}
 }
 
-func (c *Client) writePump() {
+func (c *Client) writePump(){
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
@@ -84,19 +83,19 @@ func (c *Client) writePump() {
 	}()
 
 	for {
-		select {
-		case message, ok := <-c.send:
+		select{
+		case message, ok := <- c.send:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-
-			if !ok {
+			
+			if !ok{
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 
 			w, err := c.conn.NextWriter(websocket.TextMessage)
 
-			if err != nil {
-				log.Printf("Error : %v", err)
+			if err != nil{
+				log.Printf("Error : %v",err)
 				return
 			}
 
@@ -104,27 +103,27 @@ func (c *Client) writePump() {
 
 			n := len(c.send)
 
-			for i := 0; i < n; i++ {
+			for i:=0; i < n; i++{
 				w.Write(newLine)
 				w.Write(<-c.send)
 			}
 
-			if err := w.Close(); err != nil {
+			if err := w.Close(); err != nil{
 				return
 			}
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			if err:= c.conn.WriteMessage(websocket.PingMessage, nil); err != nil{
 				return
 			}
 		}
 	}
 }
 
-func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
+func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request){
 	conn, err := upgrader.Upgrade(w, r, nil)
 
-	if err != nil {
+	if err != nil{
 		log.Printf("Error: %v", err)
 		return
 	}
