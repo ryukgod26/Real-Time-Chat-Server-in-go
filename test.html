@@ -297,7 +297,12 @@
                     return false;
                 }               
                 const messageText = msg.value.trim();
-                conn.send(messageText);
+                const messageObj = {
+                    username: 'web',
+                    content: messageText,
+                    time: new Date().toISOString()
+                };
+                conn.send(JSON.stringify(messageObj));
                 appendMessage(messageText, 'user');
                 msg.value = '';
                 msg.focus();
@@ -330,7 +335,15 @@
                         const messages = evt.data.split('\n');
                         messages.forEach(message => {
                             if (message.trim()) {
-                                appendMessage(message, 'other');
+                                try {
+                                    const msg = JSON.parse(message);
+                                    const timestamp = new Date(msg.time).toLocaleTimeString();
+                                    const formattedMsg = `[${timestamp}] ${msg.username}: ${msg.content}`;
+                                    appendMessage(formattedMsg, 'other');
+                                } catch (e) {
+                                    // Fallback for non-JSON messages
+                                    appendMessage(message, 'other');
+                                }
                             }
                         });
                     };
